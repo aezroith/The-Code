@@ -1,0 +1,87 @@
+var fs = require('fs');
+var m = require('mraa');
+var sql = require('mssql');
+var config = {
+	user: 'CF',
+	password: 'CF',
+	server: 'sophic.ddns.net',
+	database: 'AGCM',
+};
+var DigitalPin_1 = new m.Gpio(2);
+
+DigitalPin_1.dir(m.DIR_IN);
+
+var previousReading = 1;    
+var status;
+var count = 0;
+var t=1;
+var status;
+var count2 = 0;
+
+fs.readFile('hai', 'utf8', function (err,data) {
+  if (err) {
+    return console.log(err);
+  }
+  
+ count = Number(data);
+     
+ console.log('Read File Succesfull ' + count);  
+     
+    
+periodicActivity();    
+});
+
+var minutes = 10, the_interval = minutes * 60 *  1000;
+setInterval(function() {
+  console.log("Sending to database");
+      if (count - count2 == 0)
+        status = 0;
+    
+      else
+        status = 1;
+  var connection = new sql.Connection(config, function(err) {
+		var request = new sql.Request(connection);
+		
+		request.query("INSERT INTO MileageTbl (Count, CaptureDateTime, Idle) VALUES ( " + count + ", SysDateTime() , " + status + " )", function(err, recordset) {
+			return recordset;
+            //console.log(recordset);
+		});
+    }); 
+    
+    count2 = count;
+    
+}, the_interval);
+
+
+function periodicActivity()
+{
+     
+   
+	 var currentReading = DigitalPin_1.read();
+        
+    if (currentReading >= previousReading)
+    {
+        count++;
+        previousReading = currentReading;
+    }
+    
+    
+    
+     console.log('counter is ' + count  );
+     
+    fs.writeFile("hai", count , function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    //console.log("The file was saved! " + count);
+}); 
+    
+     setTimeout(periodicActivity, 500);
+     
+         
+}
+
+
+       
+
